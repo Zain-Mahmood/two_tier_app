@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    environment {
+        IMAGE_NAME = "zainmahmood/app.py:" + "$BUILD_NUMBER"
+    }
+
 
     stages {
         stage('Cloning the project from Guthub'){
@@ -14,10 +18,21 @@ pipeline {
         stage('Building Docker image'){
             steps {
                 script {
-                    docker.build 'zmahmood/app.py'
+                    DOCKER_IMAGE = docker.build 'zainmahmood/app.py'
+        
+
                 }
             }
         }
 
+        stage('Push to Docker Hub') {
+            steps {
+                script {
+                    docker.withRegistry('', 'docker_hub_cred') {
+                        DOCKER_IMAGE.push()
+                    }
+                }
+            }
+        }
     }
 }
