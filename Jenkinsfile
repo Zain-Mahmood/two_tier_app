@@ -10,8 +10,12 @@ pipeline {
     stages {
         stage('Cloning the project from Guthub'){
             steps {
-                git branch: 'main',
-                url: 'https://github.com/Zain-Mahmood/two_tier_app.git'
+                checkout(
+                    [
+                        $class: 'GitSCM', 
+                        branches: [[name: '*/main']],
+                        userRemoteConfigs: [[url: 'git@github.com:oabu-sg/rest_mongo.git',
+                        credentialsId: 'ssh_git_cred']]])}}
             }
     
         }
@@ -22,6 +26,17 @@ pipeline {
                     DOCKER_IMAGE = docker.build IMAGE_NAME
         
 
+                }
+            }
+        }
+
+        stage('Testing the code'){
+            steps {
+                script {
+                    sh '''
+                        docker run $IMAGE_NAME pytest
+
+                    '''
                 }
             }
         }
