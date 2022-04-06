@@ -3,6 +3,7 @@ pipeline {
 
     environment {
         IMAGE_NAME = "zainmahmood/app.py:" + "$BUILD_NUMBER"
+        DOCKER_CREDENTIALS = 'docker_hub_cred'
     }
 
 
@@ -18,7 +19,7 @@ pipeline {
         stage('Building Docker image'){
             steps {
                 script {
-                    DOCKER_IMAGE = docker.build 'zainmahmood/app.py'
+                    DOCKER_IMAGE = docker.build IMAGE_NAME
         
 
                 }
@@ -28,7 +29,7 @@ pipeline {
         stage('Push to Docker Hub') {
             steps {
                 script {
-                    docker.withRegistry('', 'docker_hub_cred') {
+                    docker.withRegistry('', DOCKER_CREDENTIALS) {
                         DOCKER_IMAGE.push()
                     }
                 }
