@@ -14,7 +14,7 @@ pipeline {
                     [
                         $class: 'GitSCM', 
                         branches: [[name: '*/main']],
-                        userRemoteConfigs: [[url: 'git@github.com:oabu-sg/rest_mongo.git',
+                        userRemoteConfigs: [[url: 'git@github.com:zain-mahmood/two_tier_app.git',
                         credentialsId: 'ssh_git_cred']]])}}
             }
     
