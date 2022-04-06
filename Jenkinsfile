@@ -8,6 +8,16 @@ pipeline {
                 git branch: 'main',
                 url: 'https://github.com/Zain-Mahmood/two_tier_app.git'
             }
+    
         }
+    
+        stage('Building Docker image'){
+            steps {
+                script{
+                    docker.build 'zmahmood/app.py'
+                }
+            }
+        }
+
     }
 }
