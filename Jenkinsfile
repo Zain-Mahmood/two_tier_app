@@ -13,7 +13,7 @@ pipeline {
     
         stage('Building Docker image'){
             steps {
-                script{
+                script {
                     docker.build 'zmahmood/app.py'
                 }
             }
