@@ -1,8 +1,5 @@
 FROM python:latest
-RUN pip install flask
-ADD app.py /app.py
-ADD management.py /management.py
-ADD spartans.json /spartans.json
-ADD spartan.py /spartan.py
-ENTRYPOINT ["python", "app.py", "management.py", "spartans.json", "spartan.py"]
-
+ADD requirements.txt /requirements.txt
+ADD group4 /group4
+RUN pip install -r requirements.txt
+ENTRYPOINT ["python", "/group4/main.py"]
