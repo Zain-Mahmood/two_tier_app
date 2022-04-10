@@ -1,0 +1,66 @@
+---
+- hosts: servers
+  become: true
+  
+  var:
+    packages:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg
+      - lsb-release
+      - python3-pip
+      - virtualenv
+      - python3-setuptools
+
+
+  tasks:
+    - name: Install aptitude using apt- now
+      apt:
+        name: aptitude
+        state: latest
+        update_cache: true
+        force_apt_get: true
+      
+    - name: Installing all required packages
+      apt:
+        name: '{{ item }}'
+        state: latest
+        update_cache: true
+      loop: '{{ packages }}'
+      
+    - name: Adding the GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+        
+    - name: Adding Docker Repo
+      apt_repository:
+        repo: deb https://download.docker.com/linux/ubuntu focal stable
+        state: present
+    
+    - name: Installing Docker
+      apt: name={{ item }} state=latest update_cache=yes
+      loop: ['docker-ce', 'docker-ce-cli', 'containerd.io']
+
+    - name: Installing python library for docker
+      pip:
+        name: docker
+        
+    - name: Adding the current user to docker group
+      user:
+        name: ubuntu
+        groups: docker
+        append: yes
+
+    - name: Running a container
+      docker_container:
+        name: sparta
+        image: zainmahmood/group4:v1
+        state: started
+        container_default_behavior: compatibility
+        published_ports:
+          - "5000:5000"
+        volumes:
+          - /home/ubuntu/database.config:/database.config
+    
