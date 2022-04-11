@@ -1,6 +1,7 @@
 [servers]
-
 server1 ansible_host=34.246.135.54
 server2 ansible_host=34.246.201.23
 server3 ansible_host=54.195.147.137
+
+# Inv not used, the plays run throught terrafrom
 
