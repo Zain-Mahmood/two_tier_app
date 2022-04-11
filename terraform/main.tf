@@ -382,3 +382,6 @@ resource "aws_route53_record" "devops106_terraform_zmahmood_dns_db_tf" {
     records = [aws_instance.devops106_terraform_zmahmood_webserver_db_tf.public_ip]
 }
 
+
+
+
