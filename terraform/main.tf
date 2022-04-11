@@ -14,10 +14,23 @@ resource "aws_vpc" "devops106_zmahmood_terraform_vpc_tf"{
     }
 }
 
+data "aws_availability_zones" "available" {
+  state = "available"
+}
 
 resource "aws_subnet" "devops106_zmahmood_terraform_subnet_app_webserver_tf"{
     vpc_id = aws_vpc.devops106_zmahmood_terraform_vpc_tf.id
     cidr_block = "10.201.1.0/24" 
+    availability_zone = data.aws_availability_zones.available.names[0]
+    tags ={
+        Name = "devops106_zmahmood_app_subnet"
+    }
+}
+
+resource "aws_subnet" "devops106_zmahmood_terraform_subnet_app_webserver2_tf"{
+    vpc_id = aws_vpc.devops106_zmahmood_terraform_vpc_tf.id
+    cidr_block = "10.201.3.0/24" 
+    availability_zone = data.aws_availability_zones.available.names[1]
     tags ={
         Name = "devops106_zmahmood_app_subnet"
     }
@@ -55,9 +68,13 @@ resource "aws_route_table" "devops106_zmahmood_terraform_rt_public_tf"{
     }
 }
 
-
 resource "aws_route_table_association" "devops106_zmahmood_terraform_rt_assoc_app_public_webserver_tf"{
     subnet_id = aws_subnet.devops106_zmahmood_terraform_subnet_app_webserver_tf.id
+    route_table_id = aws_route_table.devops106_zmahmood_terraform_rt_public_tf.id
+}
+
+resource "aws_route_table_association" "devops106_zmahmood_terraform_rt_assoc_app_public_webserver2_tf"{
+    subnet_id = aws_subnet.devops106_zmahmood_terraform_subnet_app_webserver2_tf.id
     route_table_id = aws_route_table.devops106_zmahmood_terraform_rt_public_tf.id
 }
 
@@ -65,7 +82,6 @@ resource "aws_route_table_association" "devops106_zmahmood_terraform_rt_assoc_db
     subnet_id = aws_subnet.devops106_zmahmood_terraform_subnet_db_webserver_tf.id
     route_table_id = aws_route_table.devops106_zmahmood_terraform_rt_public_tf.id
 }
-
 
 resource "aws_network_acl" "devops106_zmahmood_terraform_nacl_app_public_tf"{
     vpc_id = aws_vpc.devops106_zmahmood_terraform_vpc_tf.id
@@ -83,6 +99,15 @@ resource "aws_network_acl" "devops106_zmahmood_terraform_nacl_app_public_tf"{
         rule_no = 200
         from_port = 27017
         to_port = 27017
+        cidr_block = "0.0.0.0/0"
+        protocol = "tcp"
+        action = "allow"
+    }
+
+    ingress {
+        rule_no = 300
+        from_port = 80
+        to_port = 80
         cidr_block = "0.0.0.0/0"
         protocol = "tcp"
         action = "allow"
@@ -125,7 +150,7 @@ resource "aws_network_acl" "devops106_zmahmood_terraform_nacl_app_public_tf"{
         action = "allow"
     }
 
-    subnet_ids = [aws_subnet.devops106_zmahmood_terraform_subnet_app_webserver_tf.id]
+    subnet_ids = [aws_subnet.devops106_zmahmood_terraform_subnet_app_webserver_tf.id, aws_subnet.devops106_zmahmood_terraform_subnet_app_webserver2_tf.id]
 
     tags={
         Name = "devops106_zmahmood_terraform_nacl_app_public"
@@ -207,6 +232,13 @@ resource "aws_security_group" "devops106_terraform_zmahmood_sg_app_webserver_tf"
         cidr_blocks = ["0.0.0.0/0"]
     }
 
+    ingress {
+        from_port = 80
+        to_port = 80
+        protocol = "tcp"
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+
     ingress{
         from_port = 5000
         to_port = 5000
@@ -256,6 +288,31 @@ resource "aws_security_group" "devops106_terraform_zmahmood_sg_db_webserver_tf"{
     }
 }
 
+resource "aws_security_group" "devops106_terraform_zmahmood_sg_lb_tf" {
+    name = "devops106_terraform_zmahmood_sg_lb"
+    vpc_id = aws_vpc.devops106_zmahmood_terraform_vpc_tf.id
+
+    ingress {
+        from_port = 0
+        to_port = 0
+        protocol = -1
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+
+    egress {
+        from_port = 0
+        to_port = 0
+        protocol = -1
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+
+    tags = {
+        Name = "devops106_terraform_zmahmood_sg_lb"
+
+    }
+
+}
+
 data "template_file" "app_init" {
     template = file("../init-scripts/docker-install.sh")
 }
@@ -263,7 +320,6 @@ data "template_file" "app_init" {
 data "template_file" "db_init" {
     template = file("../init-scripts/mongodb-install.sh")
 }
-
 
 resource "aws_instance" "devops106_terraform_zmahmood_webserver_app_tf" {
     ami = "ami-08ca3fed11864d6bb"
@@ -275,7 +331,7 @@ resource "aws_instance" "devops106_terraform_zmahmood_webserver_app_tf" {
     associate_public_ip_address = true
 
     # user_data = data.template_file.app_init.rendered
-    count = 3
+    count = 2
     tags ={
         Name ="devops106_terraform_zmahmood_app_webserver"
     }
@@ -321,6 +377,22 @@ resource "aws_instance" "devops106_terraform_zmahmood_webserver_app_tf" {
     #     ]
     # }
 
+}
+
+resource "aws_instance" "devops106_terraform_zmahmood_webserver2_app_tf" {
+    ami = "ami-08ca3fed11864d6bb"
+    instance_type = "t2.micro"
+    key_name = "devops106_zmahmood"
+    vpc_security_group_ids = [aws_security_group.devops106_terraform_zmahmood_sg_app_webserver_tf.id]
+
+    subnet_id = aws_subnet.devops106_zmahmood_terraform_subnet_app_webserver_tf.id
+    associate_public_ip_address = true
+
+    # user_data = data.template_file.app_init.rendered
+    count = 2
+    tags ={
+        Name ="devops106_terraform_zmahmood_app_webserver_2_${count.index}"
+    }
 }
 
 resource "aws_instance" "devops106_terraform_zmahmood_webserver_db_tf" {
@@ -382,6 +454,58 @@ resource "aws_route53_record" "devops106_terraform_zmahmood_dns_db_tf" {
     records = [aws_instance.devops106_terraform_zmahmood_webserver_db_tf.public_ip]
 }
 
+# resource "aws_route53_record" "devops106_terraform_zmahmood_dns_app_tf" {
+#     zone_id = aws_route53_zone.devops106_terraform_zmahmood_dns_zone_tf.zone_id
+#     name = "spartan"
+#     type = "A"
+#     ttl = 30
+#     records = [aws_instance.devops106_terraform_zmahmood_webserver_app_tf.[*].public_ip]
+# }
+resource "aws_lb" "devops106_terraform_zmahmood_lb_tf" {
+    name = "devops106terraformzmahmood-lb"
+    internal = false
+    load_balancer_type = "application"
+    subnets = [aws_subnet.devops106_zmahmood_terraform_subnet_app_webserver_tf.id, aws_subnet.devops106_zmahmood_terraform_subnet_app_webserver2_tf.id]
+    security_groups = [aws_security_group.devops106_terraform_zmahmood_sg_lb_tf.id]
+
+    tags = {
+        Name = "devops106_terraform_zmahmood_lb"
+    }
+  
+}
+
+resource "aws_alb_target_group" "devops106_terraform_zmahmood_tg_tf" {
+    name = "devops106terraformzmahmood-tg"
+    port = 5000
+    target_type = "instance"
+    protocol = "HTTP"
+    vpc_id = aws_vpc.devops106_zmahmood_terraform_vpc_tf.id
+  
+}
+
+
+resource "aws_alb_target_group_attachment" "devops106_terraform_zmahmood_tg_attach_tf" {
+  target_group_arn = aws_alb_target_group.devops106_terraform_zmahmood_tg_tf.arn
+  count = length(aws_instance.devops106_terraform_zmahmood_webserver_app_tf)
+  target_id = aws_instance.devops106_terraform_zmahmood_webserver_app_tf[count.index].id
+}
+
+resource "aws_alb_target_group_attachment" "devops106_terraform_zmahmood_tg_2_attach_tf" {
+  target_group_arn = aws_alb_target_group.devops106_terraform_zmahmood_tg_tf.arn
+  count = length(aws_instance.devops106_terraform_zmahmood_webserver2_app_tf)
+  target_id = aws_instance.devops106_terraform_zmahmood_webserver2_app_tf[count.index].id
+}
+
+
+resource "aws_alb_listener" "devops106_terraform_zmahmood_lb_listener_tf" {
+    load_balancer_arn = aws_lb.devops106_terraform_zmahmood_lb_tf.arn
+    port = 80
+    protocol = "HTTP"
 
 
 
+    default_action {
+      type = "forward"
+      target_group_arn = aws_alb_target_group.devops106_terraform_zmahmood_tg_tf.arn
+    }
+}
